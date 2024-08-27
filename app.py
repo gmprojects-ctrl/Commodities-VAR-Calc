@@ -369,8 +369,20 @@ def main():
         # Plot the forecasted values
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=testing_data.index,y=forcasted_values['Forecasted Volatility'],name="Forecasted (Conditional) Volatility",line=dict(color='red')))
-        fig.add_trace(go.Scatter(x=testing_data.index,y=np.abs(testing_data['Log Returns']),name="Log Returns (absolute value)"))
+        fig.add_trace(go.Scatter(x=testing_data.index,y=testing_data['Log Returns'],name="Log Returns (absolute value)"))
         fig.update_layout(title=f"Rolling Forecasted (Conditional) Volatility ({p_garch,q_garch}) for {commodity} over {rolling_window} day period on Testing Data")
+        st.plotly_chart(fig)
+        
+        # Plot the residuals
+        residuals_test = testing_data['Log Returns'] / forcasted_values['Forecasted Volatility']
+        residuals_test.name = 'Residuals'
+        
+        # Plot the residuals
+        fig = go.Figure()
+        fig.add_trace(go.Histogram(x=residuals_test,nbinsx=50))
+        fig.add_vline(x=residuals_test.mean(),line=dict(color='red'),name="Mean",annotation_text=f"Mean: {residuals_test.mean():.2f}")
+        fig.add_vline(x=residuals_test.std(),line=dict(color='green'),name="Standard Deviation",annotation_text=f"Standard Deviation: {residuals_test.std():.2f}")
+        fig.update_layout(title=f"Histogram of Residuals for GARCH({p_garch,q_garch}) for {commodity} over {rolling_window} day period on Testing Data")
         st.plotly_chart(fig)
         
         
@@ -384,6 +396,12 @@ def main():
         fig.add_trace(go.Scatter(x=testing_data.index,y=forecasted_var,name="Forecasted VAR"))
         fig.update_layout(title=f"Forecasted VAR at 5% signficance level for {commodity} over {rolling_window} day period on Testing Data")
         st.plotly_chart(fig)
+        
+        # Most reent forecasted VAR
+        most_recent_forecasted_var = forecasted_var.iloc[-1]
+        
+        # Write the most recent forecasted VAR
+        st.write(f"The most recent forecasted VAR at the 5% significance level is {(1-most_recent_forecasted_var)*100:.2f}%")
         
         # Write the model summary
         st.write(model_fit.summary())
