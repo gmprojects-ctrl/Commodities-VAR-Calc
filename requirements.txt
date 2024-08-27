@@ -6,3 +6,4 @@ plotly==5.23.0
 scipy==1.14.1
 statsmodels==0.14.1
 matplotlib==3.9.2
+arch==7.0.0
