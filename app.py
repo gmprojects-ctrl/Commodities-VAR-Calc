@@ -290,7 +290,7 @@ def main():
         model = arch.arch_model(training_data['Log Returns'],mean='Zero',vol='Garch',p=p_garch,q=q_garch)
         
         # Fit the model
-        model_fit = model.fit()
+        model_fit = model.fit(disp='off')
         
         # Get the conditional volatility (which is the square root of the variance and equal to the |log returns|)
         conditional_volatility = model_fit.conditional_volatility
@@ -319,8 +319,10 @@ def main():
             model = arch.arch_model(conditional_training_data['Log Returns'],mean='Zero',vol='Garch',p=p_garch,q=q_garch)
             
             # Fit the model
-            model_fit = model.fit()
+            model_fit = model.fit(disp='off')
             
+        # Assert conditional training data is the same as garch data
+        assert conditional_training_data.equals(garch_data)
         
             
         # Plot the forecasted values
