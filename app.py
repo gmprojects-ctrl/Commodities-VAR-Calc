@@ -177,7 +177,23 @@ def main():
         
     
     
-    with st.expander("Options Pricing"):
+    with st.expander("Call Options Pricing"):
+        # Using the following formula:
+        st.markdown(r"""
+                    This is the Black-Scholes formula for a call option:
+                    $$C = S_0 N(d_1) - K e^{-rT} N(d_2)$$
+                    
+                    $C$ is the call price, $S_0$ is the current price of the commodity, $K$ is the strike price, $r$ is the risk free rate, $T$ is the time to expiration and $N$ is the cumulative distribution function of the standard normal distribution.
+                """)
+        st.markdown(r"""
+                    Where:
+                    $$d_1 = \frac{1}{\sigma \sqrt{T}} \left( \ln \left( \frac{S_0}{K} \right) + (r + \frac{\sigma^2}{2})T \right)$$
+                    and
+                    $$d_2 = d_1 - \sigma \sqrt{T}$$
+                     
+                     
+                    """
+                    )
         
         # Calculate the daily volatility
         daily_vol = log_returns.std().values[0]
