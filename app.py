@@ -81,11 +81,11 @@ def call_black_scholes(S_0:float, K:float, log_vol:float,rate:float, delta_t: fl
     return call_value
     
 def put_black_scholes(S_0:float, K:float, log_vol:float,rate:float, delta_t: float)->float:
-    # Get the call value
+    
+    # Call value
     call_value = call_black_scholes(S_0, K, log_vol,rate, delta_t)
     
-    # Put value
-    return 0
+    return call_value - S_0 + K*np.exp(-rate*delta_t)
     
     
     
@@ -162,8 +162,8 @@ def main():
         # Plot the histogram
         fig = go.Figure()
         fig.add_trace(go.Histogram(x=sum_log_returns['Log Returns'],nbinsx=50))
-        fig.add_vline(x=log_value_at_risk,line=dict(color='red'),name="Value at Risk")  
-        fig.add_vline(x=log_expected_shortfall,line=dict(color='green'),name="Expected Shortfall")
+        fig.add_vline(x=log_value_at_risk,line=dict(color='red'),name="Value at Risk",annotation_text=f"VAR")
+        fig.add_vline(x=log_expected_shortfall,line=dict(color='green'),name="Expected Shortfall",annotation_text=f"CVAR")
         
         fig.update_layout(title=f"Histogram of Log Returns for {commodity} over {rolling_window} day period")
         
@@ -177,7 +177,7 @@ def main():
         
     
     
-    with st.expander("Call Options Pricing"):
+    with st.expander("Options Pricing"):
         # Using the following formula:
         st.markdown(r"""
                     This is the Black-Scholes formula for a call option:
@@ -194,6 +194,9 @@ def main():
                      
                     """
                     )
+        st.markdown(r""" The Put price is given by Put-Call parity:
+                    $$P = C - S_0 + K e^{-rT}$$
+                    """)
         
         # Calculate the daily volatility
         daily_vol = log_returns.std().values[0]
@@ -223,9 +226,15 @@ def main():
         # Calculate the call price
         call_price = call_black_scholes(commodity_data['Close'].iloc[-1],strike_price,annual_vol,rate,delta_t)
         
+        # Calculate the put price
+        put_price = put_black_scholes(commodity_data['Close'].iloc[-1],strike_price,annual_vol,rate,delta_t)
+        
+        
         # Write the call price
         st.write(f"The call price is {call_price:.2f}")
         
+        # Write the put price
+        st.write(f"The put price is {put_price:.2f}")
     with st.expander(f"Using GARCH model to model {commodity} log returns volatility over {rolling_window} day period"):
         st.markdown("""
         ## GARCH Model
@@ -244,7 +253,7 @@ def main():
         
         st.markdown("""
         We can use a GARCH model to measure the volatility of an assets log returns over a period of time. \n
-        In fact we can use the GARCH model to forecast the volatility of an asset over a period of time though it is important to note that the GARCH model does not forecast the returns of an asset.
+        In fact we can use the GARCH model to forecast the volatility of an asset over a period of time and its VAR though it is important to note that the GARCH model does not forecast the returns of an asset.
         nor it is accurate in predicting the future volatility of an asset""")
         
         # Garch data
@@ -322,6 +331,18 @@ def main():
         fig.update_layout(title=f"Model Fit for GARCH({p_garch,q_garch}) for {commodity} over {rolling_window} day period on Training Data")
         st.plotly_chart(fig)
         
+        # Test the model fit
+        residuals = training_data['Log Returns'] / conditional_volatility
+        residuals.name = 'Residuals'
+        
+        # Plot the residuals
+        fig = go.Figure()
+        fig.add_trace(go.Histogram(x=residuals,nbinsx=50))
+        fig.add_vline(x=residuals.mean(),line=dict(color='red'),name="Mean",annotation_text=f"Mean: {residuals.mean():.2f}") 
+        fig.add_vline(x=residuals.std(),line=dict(color='green'),name="Standard Deviation",annotation_text=f"Standard Deviation: {residuals.std():.2f}")   
+        fig.update_layout(title=f"Histogram of Residuals for GARCH({p_garch,q_garch}) for {commodity} over {rolling_window} day period on Training Data")
+        st.plotly_chart(fig)
+        
         # Get the forecast
         forcasted_values = pd.DataFrame(index=testing_data.index,columns=['Forecasted Volatility'])
         
@@ -352,6 +373,17 @@ def main():
         fig.update_layout(title=f"Rolling Forecasted (Conditional) Volatility ({p_garch,q_garch}) for {commodity} over {rolling_window} day period on Testing Data")
         st.plotly_chart(fig)
         
+        
+        # Plot the forecasted VAR (Value at Risk) 
+        forecasted_var = forcasted_values['Forecasted Volatility'].astype(float)/ (1000)
+        forecasted_var = forecasted_var * -1.645
+        forecasted_var = np.exp(forecasted_var)
+        
+        # Plot the forecasted VAR
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=testing_data.index,y=forecasted_var,name="Forecasted VAR"))
+        fig.update_layout(title=f"Forecasted VAR at 5% signficance level for {commodity} over {rolling_window} day period on Testing Data")
+        st.plotly_chart(fig)
         
         # Write the model summary
         st.write(model_fit.summary())
