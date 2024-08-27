@@ -226,7 +226,7 @@ def main():
         # Write the call price
         st.write(f"The call price is {call_price:.2f}")
         
-    with st.expander(f"Using GARCH model for {commodity} log returns over {rolling_window} day period"):
+    with st.expander(f"Using GARCH model to model {commodity} log returns volatility over {rolling_window} day period"):
         st.markdown("""
         ## GARCH Model
         
@@ -242,6 +242,10 @@ def main():
         
         st.markdown(r'$$\sigma_t^2 = \omega + \sum_{i=1}^{p} \alpha_i \epsilon_{t-i}^2 + \sum_{i=1}^{q} \beta_i \sigma_{t-i}^2$$')
         
+        st.markdown("""
+        We can use a GARCH model to measure the volatility of an assets log returns over a period of time. \n
+        In fact we can use the GARCH model to forecast the volatility of an asset over a period of time though it is important to note that the GARCH model does not forecast the returns of an asset.
+        nor it is accurate in predicting the future volatility of an asset""")
         
         # Garch data
         # Scale by 1000
@@ -314,7 +318,7 @@ def main():
         # Plot the conditional volatility
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=training_data.index,y=conditional_volatility,name="Conditional Volatility", line=dict(color='red')))
-        fig.add_trace(go.Scatter(x=training_data.index,y=np.abs(training_data['Log Returns']),name="Log Returns"))
+        fig.add_trace(go.Scatter(x=training_data.index,y=training_data['Log Returns'],name="Log Returns"))
         fig.update_layout(title=f"Model Fit for GARCH({p_garch,q_garch}) for {commodity} over {rolling_window} day period on Training Data")
         st.plotly_chart(fig)
         
@@ -343,18 +347,11 @@ def main():
             
         # Plot the forecasted values
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=testing_data.index,y=forcasted_values['Forecasted Volatility'],name="Forecasted Volatility",line=dict(color='red')))
+        fig.add_trace(go.Scatter(x=testing_data.index,y=forcasted_values['Forecasted Volatility'],name="Forecasted (Conditional) Volatility",line=dict(color='red')))
         fig.add_trace(go.Scatter(x=testing_data.index,y=np.abs(testing_data['Log Returns']),name="Log Returns (absolute value)"))
-        fig.update_layout(title=f"Rolling Forecasted Volatility ({p_garch,q_garch}) for {commodity} over {rolling_window} day period on Testing Data")
+        fig.update_layout(title=f"Rolling Forecasted (Conditional) Volatility ({p_garch,q_garch}) for {commodity} over {rolling_window} day period on Testing Data")
         st.plotly_chart(fig)
         
-        # Root mean squared error
-        rmse = np.sqrt(np.mean((forcasted_values['Forecasted Volatility'] - np.abs(testing_data['Log Returns']))**2))
-        
-        
-        
-        # Write the RMSE
-        st.write(f"The RMSE is {rmse:.2f}")
         
         # Write the model summary
         st.write(model_fit.summary())
