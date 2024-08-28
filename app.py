@@ -92,7 +92,7 @@ def put_black_scholes(S_0:float, K:float, log_vol:float,rate:float, delta_t: flo
 
 # Main function
 def main():
-    st.title("Portfolio Analyzer")
+    st.title("Analyzer")
     
     # Load the data
     try:
