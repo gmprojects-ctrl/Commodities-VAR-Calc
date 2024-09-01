@@ -88,6 +88,27 @@ def put_black_scholes(S_0:float, K:float, log_vol:float,rate:float, delta_t: flo
     return call_value - S_0 + K*np.exp(-rate*delta_t)
     
     
+def MonteCarloVar(mu: float, vol: float, delta_T: float, _periods:int, _simulations:int,p_value:float=0.05):
+    
+    # Create normal samples
+    # That creates mu t + vol * sqrt t N
+    normal_samples = np.random.normal(loc=mu*delta_T, scale=vol*np.sqrt(delta_T), size=(_simulations,_periods))
+    
+    # Sum it up
+    normal_samples = np.sum(normal_samples,axis=1)
+        
+    # Find the p_value
+    var_p =  np.quantile(normal_samples,q=p_value)
+    
+    # Make into a datafram
+    sim_returns = pd.DataFrame(normal_samples,columns=['ret'])
+    
+    # CVAr
+    cvar_p = sim_returns.loc[ sim_returns['ret'] <= var_p ].mean().values[0]
+    
+
+
+    return (sim_returns,var_p,cvar_p)
     
 
 # Main function
@@ -137,7 +158,7 @@ def main():
         st.plotly_chart(px.line(commodity_data,x=commodity_data.index,y='Close',title=f"{commodity} Prices"))
         
 
-    with st.expander("VAR and Options Price"):
+    with st.expander("Historical Var"):
         
         
         
@@ -174,8 +195,38 @@ def main():
         st.write(f"The value at risk is {(1-value_at_risk)*100:.2f}% at the 5% confidence level over a {rolling_window} day period") 
         st.write(f"The expected shortfall is {(1-expected_shortfall)*100:.2f}% at the 5% confidence level over a {rolling_window} day period")
 
-        
     
+    with st.expander("Monte Carlo Var"):
+        st.markdown(r"""We will be using the model 
+                    $$S_t = S_0 e^{\mu t + \sigma W_t}$$
+                    where $S_t$ is the price at time $t$, $S_0$ is the initial price, $\mu$ is the drift, $\sigma$ is the volatility and $W_t$ is the Wiener process.
+                    """)
+        st.markdown(r"""Thus
+                    $$\log(S_t) - \log(S_t-1) = \mu \Delta t + \sigma \sqrt{\Delta t} Z$$
+                    where $Z$ is a standard normal random variable.
+                    """)
+                    
+        # Enter a number of simulations
+        simulations = st.number_input(label="Enter a number of simulations",min_value=1,step=1,value=1000)
+        
+        # Get the daily vol
+        daily_vol = log_returns.std().values[0]
+        mu_sample = log_returns.mean().values[0]
+        
+        # Get the monte carlo var
+        sim_returns, MC_var, MC_cvar = MonteCarloVar(mu=mu_sample,vol=daily_vol,delta_T=1,_periods=rolling_window,_simulations=simulations)
+        
+        # Plot the histogram
+        fig = go.Figure()
+        fig.add_trace(go.Histogram(x=sim_returns['ret'],nbinsx=50))
+        fig.add_vline(x=MC_var,line=dict(color='red'),name="Value at Risk",annotation_text=f"VAR")
+        fig.add_vline(x=MC_cvar,line=dict(color='green'),name="Expected Shortfall",annotation_text=f"CVAR")
+        fig.update_layout(title=f"Histogram of Monte Carlo Simulations for {commodity} Log Returns over {rolling_window} day period")
+        st.plotly_chart(fig)
+        
+        # Exponeniate MC_var
+        st.write(f"The Monte Carlo VAR for {commodity} for a {rolling_window} day period at a 5% significance level is {100- np.exp(MC_var)*100:.2f}%")
+        st.write(f"The Monte Carlo expected shortfall for {commodity} for a {rolling_window} day period at a 5% significance level is {100- np.exp(MC_cvar)*100:.2f}%")
     
     with st.expander("Options Pricing"):
         # Using the following formula:
@@ -236,9 +287,7 @@ def main():
         # Write the put price
         st.write(f"The put price is {put_price:.2f}")
     with st.expander(f"Using GARCH model to model {commodity} log returns volatility over {rolling_window} day period"):
-        st.markdown("""
-        ## GARCH Model
-        
+        st.markdown(r"""     
         Consider the following model:
         $$y_t = \mu + \epsilon_t$$
         
