@@ -6,6 +6,7 @@ from pathlib import Path
 import plotly.express as px
 import plotly.graph_objects as go   
 from scipy.stats import norm
+from scipy.stats import normaltest
 from statsmodels.tsa.stattools import acf, pacf
 import arch
 
@@ -207,7 +208,7 @@ def main():
                     """)
                     
         # Enter a number of simulations
-        simulations = st.number_input(label="Enter a number of simulations",min_value=1,step=1,value=1000)
+        simulations = st.number_input(label="Enter a number of simulations",min_value=1,step=1,value=100)
         
         # Get the daily vol
         daily_vol = log_returns.std().values[0]
@@ -302,7 +303,7 @@ def main():
         
         st.markdown("""
         We can use a GARCH model to measure the volatility of an assets log returns over a period of time. \n
-        In fact we can use the GARCH model to forecast the volatility of an asset over a period of time and its VAR though it is important to note that the GARCH model does not forecast the returns of an asset.
+        In fact we can use the GARCH model to forecast the volatility of an asset over a period of time and its VAR though it is important to note that the GARCH model does not forecast the real returns of an asset.
         nor it is accurate in predicting the future volatility of an asset""")
         
         # Garch data
@@ -314,12 +315,17 @@ def main():
         training_data = garch_data.iloc[:int(len(garch_data)*0.8)].copy()
         testing_data = garch_data.iloc[int(len(garch_data)*0.8):].copy()
         conditional_training_data = training_data.copy()    
+       
+       
+        
+        
         
         # Divider
         st.divider()
         
         # Note the log returns are mulitplied by a 1000
         st.markdown("Note the log returns are mulitplied by a 1000")
+        st.markdown("Note there is an 80/20 split between the training and testing data")
         
         # Create tabs
         tabs = st.tabs(["Training Data","Testing Data"])
@@ -373,7 +379,7 @@ def main():
         # Get the conditional volatility (which is the square root of the variance and equal to the |log returns|)
         conditional_volatility = model_fit.conditional_volatility
         
-        # Plot the conditional volatility
+        # Plot the conditional volatility and log returns of the training data
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=training_data.index,y=conditional_volatility,name="Conditional Volatility", line=dict(color='red')))
         fig.add_trace(go.Scatter(x=training_data.index,y=training_data['Log Returns'],name="Log Returns"))
@@ -384,13 +390,27 @@ def main():
         residuals = training_data['Log Returns'] / conditional_volatility
         residuals.name = 'Residuals'
         
-        # Plot the residuals
+        # Plot the residuals for the training data
         fig = go.Figure()
         fig.add_trace(go.Histogram(x=residuals,nbinsx=50))
         fig.add_vline(x=residuals.mean(),line=dict(color='red'),name="Mean",annotation_text=f"Mean: {residuals.mean():.2f}") 
-        fig.add_vline(x=residuals.std(),line=dict(color='green'),name="Standard Deviation",annotation_text=f"Standard Deviation: {residuals.std():.2f}")   
+        fig.add_vline(x=residuals.std(),line=dict(color='green'),name="Standard Deviation",annotation_text=f"Standard Deviation: {residuals.std():.2f}")  
         fig.update_layout(title=f"Histogram of Residuals for GARCH({p_garch,q_garch}) for {commodity} over {rolling_window} day period on Training Data")
         st.plotly_chart(fig)
+        
+        # Do the norm test
+        p_value_training = normaltest(residuals.values)[1]
+        
+        # Write the p value
+        st.write(f"The p value for a normality test for the training residuals is {p_value_training:.2f}")
+        
+        
+        
+        
+        
+        
+        
+        
         
         # Get the forecast
         forcasted_values = pd.DataFrame(index=testing_data.index,columns=['Forecasted Volatility'])
@@ -418,12 +438,20 @@ def main():
         # Plot the forecasted values
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=testing_data.index,y=forcasted_values['Forecasted Volatility'],name="Forecasted (Conditional) Volatility",line=dict(color='red')))
-        fig.add_trace(go.Scatter(x=testing_data.index,y=testing_data['Log Returns'],name="Log Returns (absolute value)"))
+        fig.add_trace(go.Scatter(x=testing_data.index,y=testing_data['Log Returns'],name="Log Returns"))
         fig.update_layout(title=f"Rolling Forecasted (Conditional) Volatility ({p_garch,q_garch}) for {commodity} over {rolling_window} day period on Testing Data")
         st.plotly_chart(fig)
         
+        # Get the root mean squared error
+        #rmse = np.abs(testing_data['Log Returns']) - forcasted_values['Forecasted Volatility']
+        #rmse = np.sqrt(np.mean(rmse**2))
+        
+
+        # Write the root mean squared error
+        #st.write(f"The root mean squared error is {rmse:.2f}")
+        
         # Plot the residuals
-        residuals_test = testing_data['Log Returns'] / forcasted_values['Forecasted Volatility']
+        residuals_test = (testing_data['Log Returns'] / forcasted_values['Forecasted Volatility']).astype(float)
         residuals_test.name = 'Residuals'
         
         # Plot the residuals
@@ -433,11 +461,17 @@ def main():
         fig.add_vline(x=residuals_test.std(),line=dict(color='green'),name="Standard Deviation",annotation_text=f"Standard Deviation: {residuals_test.std():.2f}")
         fig.update_layout(title=f"Histogram of Residuals for GARCH({p_garch,q_garch}) for {commodity} over {rolling_window} day period on Testing Data")
         st.plotly_chart(fig)
+       
+        # Do the norm test
+        p_value_test = normaltest(residuals_test.values)[1]
+        
+        # Write the p value
+        st.write(f"The p value for a normality test for the testing residuals is {p_value_test:.2f}")
         
         
         # Plot the forecasted VAR (Value at Risk) 
         forecasted_var = forcasted_values['Forecasted Volatility'].astype(float)/ (1000)
-        forecasted_var = forecasted_var * -1.645
+        forecasted_var = forecasted_var * norm().ppf(0.05)
         forecasted_var = np.exp(forecasted_var)
         
         # Plot the forecasted VAR
