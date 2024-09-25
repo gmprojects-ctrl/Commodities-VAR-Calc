@@ -9,6 +9,7 @@ COMMODITY_LIST = {
     "GC=F" : "Gold",  # Gold
     "HG=F" : "Copper",  # Copper
     "CL=F" : "WTI",  # WTI Crude Oil
+    "NG=F" : "HH Natural Gas", # Henry Hub Natural Gas
     
 }
 

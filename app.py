@@ -320,7 +320,7 @@ def main():
         st.markdown("""
         We can use a GARCH model to measure the volatility of an assets log returns over a period of time. \n
         In fact we can use the GARCH model to forecast the volatility of an asset over a period of time and its VAR though it is important to note that the GARCH model does not forecast the real returns of an asset,
-        nor it is accurate in predicting the future volatility of an asset""")
+        nor it is accurate in predicting the future volatility of an asset.""")
         
         # Garch data
         # Scale by 1000
