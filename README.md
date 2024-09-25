@@ -18,5 +18,5 @@ The app is divided into 4 main sections:
 2. VAR using Monte Carlo Simulation
 3. VAR using GARCH Model
 
-**NOTE: This is not optimized, nor is production ready. It was created on the fly to demonstrate my knowledge of Value at Risk calculations for commodities. It is not intended to be used in a production environment nor is representative of my programming ethic in general**
+**NOTE: This is not optimized, nor is production ready. It was created on the fly to demonstrate my knowledge of Value at Risk calculations for commodities. It is not intended to be used in a production environment nor is representative of my programming ethic in general.**
 
