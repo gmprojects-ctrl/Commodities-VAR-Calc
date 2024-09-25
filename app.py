@@ -10,7 +10,7 @@ from scipy.stats import normaltest
 from statsmodels.tsa.stattools import acf, pacf
 import arch
 
-from comm_data import COMMODITY_LIST
+from comm_data import COMMODITY_LIST,get_commodity_data
 
 # Data Path
 DATA_PATH = Path("./data.feather")
@@ -114,7 +114,23 @@ def MonteCarloVar(mu: float, vol: float, delta_T: float, _periods:int, _simulati
 
 # Main function
 def main():
-    st.title("Analyzer")
+    st.title("VAR Models for Commodities")
+    
+    
+    # Create a sidebar to refresh the data
+    refresh_data = st.sidebar.button("Refresh Data")
+    
+    # If the data is refreshed
+    if refresh_data:
+        try:
+            get_commodity_data()
+            st.success("Data has been refreshed")
+            st.rerun()
+        except Exception as e:
+            st.error(f"Cannot refresh data : {str(e)}")
+    
+    
+    
     
     # Load the data
     try:
@@ -303,7 +319,7 @@ def main():
         
         st.markdown("""
         We can use a GARCH model to measure the volatility of an assets log returns over a period of time. \n
-        In fact we can use the GARCH model to forecast the volatility of an asset over a period of time and its VAR though it is important to note that the GARCH model does not forecast the real returns of an asset.
+        In fact we can use the GARCH model to forecast the volatility of an asset over a period of time and its VAR though it is important to note that the GARCH model does not forecast the real returns of an asset,
         nor it is accurate in predicting the future volatility of an asset""")
         
         # Garch data
@@ -438,7 +454,7 @@ def main():
         # Plot the forecasted values
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=testing_data.index,y=forcasted_values['Forecasted Volatility'],name="Forecasted (Conditional) Volatility",line=dict(color='red')))
-        fig.add_trace(go.Scatter(x=testing_data.index,y=testing_data['Log Returns'],name="Log Returns"))
+        fig.add_trace(go.Scatter(x=testing_data.index,y=np.abs(testing_data['Log Returns']),name="ABS Log Returns"))
         fig.update_layout(title=f"Rolling Forecasted (Conditional) Volatility ({p_garch,q_garch}) for {commodity} over {rolling_window} day period on Testing Data")
         st.plotly_chart(fig)
         

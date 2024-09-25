@@ -12,10 +12,18 @@ COMMODITY_LIST = {
     
 }
 
+# Start date
 START_DATE = '2010-01-01'
 
 
 def get_commodity_data():
+    '''
+    Title: get_commodity_data
+    Description: This function downloads commodity data from Yahoo Finance and writes it to a feather file in the local directory.
+    Parameters: None
+    Returns: None
+    '''
+
     comm_data = []
     
     for comm in COMMODITY_LIST:
@@ -24,11 +32,12 @@ def get_commodity_data():
         comm_data.append(data)
     
     comm_data = pd.concat(comm_data,axis=0)
+
+    comm_data.to_feather("data.feather") 
+
     
-    return comm_data
+    
 
 # Main function
 if __name__ == "__main__":
-    data =get_commodity_data()
-    data.to_feather("data.feather")
-    
+    raise RuntimeError("This script is not meant to be run directly") 
